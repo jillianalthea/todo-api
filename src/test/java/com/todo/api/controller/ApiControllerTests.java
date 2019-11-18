@@ -18,8 +18,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -104,7 +106,8 @@ public class ApiControllerTests {
         todo.setPriority(1);
         todo.setCreationDate(now);
 
-        when(repo.getOne("123")).thenReturn(todo);
+        Optional<Todo> optional = Optional.of(todo);
+        doReturn(optional).when(repo).findById("123");
 
         mvc.perform(MockMvcRequestBuilders
                 .get("/todo/123")
@@ -115,6 +118,21 @@ public class ApiControllerTests {
                 .andExpect(jsonPath("$.text").value(todo.getText()))
                 .andExpect(jsonPath("$.complete").value(todo.isComplete()))
                 .andExpect(jsonPath("$.priority").value(todo.getPriority()));
+    }
+
+
+    @Test
+    public void shouldGet200AndNullIfIdDoesNotExist_getOneTodo() throws Exception {
+
+        Optional<Todo> optional = Optional.empty();
+        doReturn(optional).when(repo).findById("123");
+
+        mvc.perform(MockMvcRequestBuilders
+                .get("/todo/123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.ALL_VALUE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").doesNotExist());
     }
 
     @Test

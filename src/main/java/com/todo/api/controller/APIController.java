@@ -19,7 +19,7 @@ public class APIController {
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity getOneTodo(@PathVariable String id) {
-        return new ResponseEntity(todoRepository.getOne(id), HttpStatus.OK);
+        return new ResponseEntity(todoRepository.findById(id).orElse(null), HttpStatus.OK);
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
