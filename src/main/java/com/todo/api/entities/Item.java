@@ -20,4 +20,14 @@ public class Item {
     private Date creationDate;
     private Date completeDate;
     private int priority;
+
+    public Item withItemId(String itemId) {
+        setItemId(itemId);
+        return this;
+    }
+
+    public Item withText(String text) {
+        setText(text);
+        return this;
+    }
 }

@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,14 +32,13 @@ public class TodoControllerTests {
     private MockMvc mvc;
 
     @Test
-    public void getReturnsListOfItems() throws Exception{
+    public void getReturnsListOfItems() throws Exception {
 
-        Item item = new Item();
-        item.setItemId("test");
+        Item item = new Item().withItemId("test");
 
-        Mockito.when(repository.findAll()).thenReturn(Arrays.asList(item));
+        Mockito.when(repository.findAll()).thenReturn(Collections.singletonList(item));
 
-        mvc.perform( MockMvcRequestBuilders
+        mvc.perform(MockMvcRequestBuilders
                 .get("/items")
                 .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
@@ -51,8 +50,7 @@ public class TodoControllerTests {
 
     @Test
     public void putNewItemAddsToList() throws Exception {
-        Item item = new Item();
-        item.setItemId("test");
+        Item item = new Item().withItemId("test");
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(item);
@@ -66,9 +64,90 @@ public class TodoControllerTests {
                 .content(json))
                 .andDo(print())
                 .andExpect(status().isCreated());
-                }
+    }
 
+    @Test
+    public void postItemEditsExisting() throws Exception {
+        Item original = new Item().withItemId("id").withText("original");
 
-    // put == create; post == update
+        Item updated = new Item().withItemId("id").withText("updated");
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(updated);
+
+        Mockito.when(repository.findById("id")).thenReturn(java.util.Optional.of(original));
+        Mockito.when(repository.save(updated)).thenReturn(updated);
+
+        mvc.perform(MockMvcRequestBuilders
+                .post("/items")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.text").value("updated"));
+    }
+
+    @Test
+    public void postNewItemAddsToList() throws Exception {
+        Item updated = new Item().withItemId("test").withText("new");
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(updated);
+
+        Mockito.when(repository.findById("test")).thenReturn(java.util.Optional.ofNullable(null));
+        Mockito.when(repository.save(updated)).thenReturn(updated);
+
+        mvc.perform(MockMvcRequestBuilders
+                .post("/items")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.text").value("new"));
+    }
+
+    @Test
+    public void deleteItem() throws Exception {
+        Item item = new Item().withItemId("idDelete").withText("testing text");
+
+        Mockito.when(repository.findById(item.getItemId())).thenReturn(java.util.Optional.of(item));
+        Mockito.doNothing().when(repository).delete(item);
+
+        mvc.perform(MockMvcRequestBuilders
+                .delete("/items/"+item.getItemId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    public void deleteItemThatDoesntExist() throws Exception {
+        Item item = new Item().withItemId("idDelete2").withText("testing text");
+
+        Mockito.when(repository.findById(item.getItemId())).thenReturn(java.util.Optional.empty());
+        Mockito.doNothing().when(repository).delete(item);
+
+        mvc.perform(MockMvcRequestBuilders
+                .delete("/items/"+item.getItemId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void getItemById() throws Exception {
+        Item item = new Item().withItemId("newId").withText("testing text");
+        Mockito.when(repository.findById(item.getItemId())).thenReturn(java.util.Optional.of(item));
+
+        mvc.perform(MockMvcRequestBuilders
+                .get("/items/" + item.getItemId())
+                .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.itemId").value("newId"));
+    }
 }
