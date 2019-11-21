@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,19 +41,27 @@ public class TodoController {
     }
 
     @PutMapping
-    public ResponseEntity putItem(@RequestBody Item item) {
-        itemRepository.save(item);
-        return new ResponseEntity<>(HttpStatus.CREATED);
-        // TODO: can return item from here
+    public ResponseEntity<Item> putItem(@RequestBody Item item) {
+        return new ResponseEntity<>(itemRepository.save(createNewItem(item)), HttpStatus.CREATED);
     }
 
-    @PostMapping
-    public ResponseEntity<Item> postItem(@RequestBody Item item) {
-        Optional<Item> existingItemOpt = itemRepository.findById(item.getItemId());
+    @PostMapping("/{itemId}")
+    public ResponseEntity<Item> postItem(@PathVariable String itemId, @RequestBody Item item) {
+        Optional<Item> existingItemOpt = itemRepository.findById(itemId);
         if (existingItemOpt.isPresent()) {
-            return new ResponseEntity<>(itemRepository.save(item.withItemId(existingItemOpt.get().getItemId())), HttpStatus.OK);
+            Item existingItem = existingItemOpt.get();
+            Item postingItem = new Item();
+            postingItem.setItemId(itemId);
+            postingItem.setCreationDate(existingItem.getCreationDate());
+            postingItem.setPriority(item.getPriority());
+            postingItem.setComplete(item.isComplete());
+            postingItem.setText(item.getText());
+            if(item.isComplete() && !existingItem.isComplete()) {
+                postingItem.setCompleteDate(new Date());
+            }
+            return new ResponseEntity<>(itemRepository.save(postingItem), HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(itemRepository.save(item), HttpStatus.CREATED);
+            return new ResponseEntity<>(itemRepository.save(createNewItem(item)), HttpStatus.CREATED);
         }
 
     }
@@ -65,5 +74,15 @@ public class TodoController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    private Item createNewItem(Item item) {
+        Item postingItem = new Item();
+        postingItem.setText(item.getText());
+        postingItem.setComplete(false);
+        postingItem.setCompleteDate(null);
+        postingItem.setPriority(item.getPriority());
+
+        return postingItem;
     }
 }
